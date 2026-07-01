@@ -2,6 +2,10 @@
 
 架空のLINE風トーク画像をブラウザだけで作成・編集し、PNG画像として保存できる静的Webアプリです。
 
+## サンプル画面
+
+![架空LINEトーク作成ツールのサンプル画面](assets/readme-sample.png)
+
 ## Repository Description
 
 架空のLINE風トーク画像をブラウザで作成・編集し、スタンプ風表示やPNG保存もできる静的Webアプリ
