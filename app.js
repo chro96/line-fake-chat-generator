@@ -3,6 +3,8 @@
 
   const STORAGE_KEY = "line-fake-chat-generator-data-v1";
   const DEFAULT_COLOR = "#8eaddb";
+  const SAMPLE_STICKER_IMAGE = "assets/sample-ok-sticker.png";
+  const STICKER_SAMPLE_VERSION = "sample-ok-sticker-2";
 
   const emptyState = {
     partnerName: "田中太郎",
@@ -10,6 +12,7 @@
     backgroundColor: DEFAULT_COLOR,
     partnerIcon: "",
     backgroundImage: "",
+    stickerSampleVersion: STICKER_SAMPLE_VERSION,
     messages: [],
   };
 
@@ -27,6 +30,14 @@
         id: "m-2",
         kind: "self",
         text: "行くってば笑\nあと10分くらい、待ってて",
+      },
+      {
+        id: "sticker-1",
+        kind: "sticker",
+        stickerSender: "other",
+        stickerImage: SAMPLE_STICKER_IMAGE,
+        stickerText: "まってる",
+        stickerSize: 168,
       },
       {
         id: "notice-1",
@@ -57,6 +68,14 @@
         id: "m-6",
         kind: "other",
         text: "半分どころか一口だけね。\n急いで〜",
+      },
+      {
+        id: "sticker-2",
+        kind: "sticker",
+        stickerSender: "self",
+        stickerImage: SAMPLE_STICKER_IMAGE,
+        stickerText: "OK!",
+        stickerSize: 156,
       },
     ],
   };
@@ -121,28 +140,81 @@
   }
 
   function normalizeState(data) {
+    const stickerSampleVersion = data && data.stickerSampleVersion;
     const next = { ...cloneData(emptyState), ...(data || {}) };
     next.partnerName = String(next.partnerName || emptyState.partnerName);
     next.statusTime = normalizeTime(next.statusTime);
     next.backgroundColor = normalizeColor(next.backgroundColor);
     next.partnerIcon = String(next.partnerIcon || "");
     next.backgroundImage = String(next.backgroundImage || "");
+    next.stickerSampleVersion = String(next.stickerSampleVersion || "");
     next.messages = Array.isArray(next.messages)
       ? next.messages.map(normalizeMessage)
       : [];
+    if (stickerSampleVersion !== STICKER_SAMPLE_VERSION) {
+      next.messages = next.messages.map((message) =>
+        message.kind === "sticker" && !message.stickerImage
+          ? { ...message, stickerImage: SAMPLE_STICKER_IMAGE }
+          : message,
+      );
+      if (shouldAppendDemoStickerEnding(next.messages)) {
+        next.messages.push({
+          id: "sticker-2",
+          kind: "sticker",
+          text: "",
+          stickerSender: "self",
+          stickerImage: SAMPLE_STICKER_IMAGE,
+          stickerText: "OK!",
+          stickerSize: 156,
+        });
+      }
+      next.stickerSampleVersion = STICKER_SAMPLE_VERSION;
+    }
     return next;
   }
 
+  function shouldAppendDemoStickerEnding(messages) {
+    const hasEndingSticker = messages.some((message) => message.id === "sticker-2");
+    const hasOldDemoLastLine = messages.some(
+      (message) =>
+        message.id === "m-6" &&
+        message.kind === "other" &&
+        message.text === "半分どころか一口だけね。\n急いで〜",
+    );
+    return hasOldDemoLastLine && !hasEndingSticker;
+  }
+
+  function messageIdPrefix(kind) {
+    if (kind === "date") return "date";
+    if (kind === "notice") return "notice";
+    if (kind === "sticker") return "sticker";
+    return "m";
+  }
+
+  function defaultStickerText() {
+    return "OK!";
+  }
+
+  function clampStickerSize(value) {
+    const size = Number(value);
+    if (!Number.isFinite(size)) return 168;
+    return Math.min(240, Math.max(96, Math.round(size)));
+  }
+
   function normalizeMessage(message, index) {
-    const allowed = new Set(["other", "self", "date", "notice"]);
+    const allowed = new Set(["other", "self", "date", "notice", "sticker"]);
     const kind = allowed.has(message && message.kind) ? message.kind : "other";
     return {
-      id: String((message && message.id) || uid(kind === "date" ? "date" : "m")),
+      id: String((message && message.id) || uid(messageIdPrefix(kind))),
       kind,
       text: String((message && message.text) || ""),
       linkTitle: String((message && message.linkTitle) || ""),
       linkDescription: String((message && message.linkDescription) || ""),
       thumbnailImage: String((message && message.thumbnailImage) || ""),
+      stickerSender: message && message.stickerSender === "self" ? "self" : "other",
+      stickerImage: String((message && message.stickerImage) || ""),
+      stickerText: String((message && message.stickerText) || defaultStickerText()),
+      stickerSize: clampStickerSize(message && message.stickerSize),
       showLinkCard:
         typeof (message && message.showLinkCard) === "boolean"
           ? message.showLinkCard
@@ -254,8 +326,21 @@
   function messageLabel(message) {
     if (message.kind === "date") return "日付";
     if (message.kind === "notice") return "通知";
+    if (message.kind === "sticker") {
+      return message.stickerSender === "self"
+        ? "自分スタンプ"
+        : `${state.partnerName || "相手"}スタンプ`;
+    }
     if (message.kind === "self") return "自分";
     return state.partnerName || "相手";
+  }
+
+  function messagePreviewText(message) {
+    if (message.kind === "sticker") {
+      if (message.stickerImage) return "スタンプ画像";
+      return `スタンプ: ${message.stickerText || defaultStickerText()}`;
+    }
+    return message.text || " ";
   }
 
   function getFocusState() {
@@ -399,6 +484,7 @@
         <div class="toolbar">
           <button class="primary" data-action="add-message" data-kind="other">${icon("plus", 16)}相手の発言</button>
           <button class="primary" data-action="add-message" data-kind="self">${icon("plus", 16)}自分の発言</button>
+          <button class="secondary" data-action="add-message" data-kind="sticker">${icon("smile", 16)}スタンプ</button>
           <button class="secondary" data-action="add-message" data-kind="date">${icon("plus", 16)}日付の区切り</button>
           <button class="secondary" data-action="add-message" data-kind="notice">${icon("plus", 16)}通知</button>
         </div>
@@ -420,7 +506,7 @@
       <div class="message-row${selected}" role="button" tabindex="0" data-action="select-message" data-id="${escapeAttr(message.id)}">
         <span class="handle" aria-hidden="true">::</span>
         <span class="tag ${escapeAttr(message.kind)}">${escapeHtml(messageLabel(message))}</span>
-        <span class="message-text">${escapeHtml(message.text || " ")}</span>
+        <span class="message-text">${escapeHtml(messagePreviewText(message))}</span>
         <span class="row-actions">
           <button class="icon-button" title="上へ" data-action="move-message" data-id="${escapeAttr(message.id)}" data-direction="-1">${icon("up", 17)}</button>
           <button class="icon-button" title="下へ" data-action="move-message" data-id="${escapeAttr(message.id)}" data-direction="1">${icon("down", 17)}</button>
@@ -433,6 +519,7 @@
 
   function renderEditBox(message) {
     const hasLink = detectUrl(message.text);
+    const isSticker = message.kind === "sticker";
     const canPreview = message.kind === "other" || message.kind === "self";
     return `
       <div class="edit-box">
@@ -441,15 +528,60 @@
           <select id="message-kind" data-bind="selectedKind" data-focus-key="selectedKind">
             <option value="other" ${message.kind === "other" ? "selected" : ""}>相手の発言</option>
             <option value="self" ${message.kind === "self" ? "selected" : ""}>自分の発言</option>
+            <option value="sticker" ${message.kind === "sticker" ? "selected" : ""}>スタンプ</option>
             <option value="date" ${message.kind === "date" ? "selected" : ""}>日付の区切り</option>
             <option value="notice" ${message.kind === "notice" ? "selected" : ""}>通知</option>
           </select>
         </div>
+        ${
+          isSticker
+            ? renderStickerEditor(message)
+            : `
+              <div class="field">
+                <label for="message-text">内容</label>
+                <textarea id="message-text" rows="3" data-bind="selectedText" data-focus-key="selectedText">${escapeHtml(message.text)}</textarea>
+              </div>
+              ${canPreview && hasLink ? renderLinkEditor(message) : ""}
+            `
+        }
+      </div>
+    `;
+  }
+
+  function renderStickerEditor(message) {
+    const size = clampStickerSize(message.stickerSize);
+    const preview = message.stickerImage
+      ? `<img src="${escapeAttr(message.stickerImage)}" alt="" />`
+      : `<span>${escapeHtml(message.stickerText || defaultStickerText())}</span>`;
+    return `
+      <div class="sticker-editor">
         <div class="field">
-          <label for="message-text">内容</label>
-          <textarea id="message-text" rows="3" data-bind="selectedText" data-focus-key="selectedText">${escapeHtml(message.text)}</textarea>
+          <label for="sticker-sender">送信者</label>
+          <select id="sticker-sender" data-bind="stickerSender" data-focus-key="stickerSender">
+            <option value="other" ${message.stickerSender !== "self" ? "selected" : ""}>相手</option>
+            <option value="self" ${message.stickerSender === "self" ? "selected" : ""}>自分</option>
+          </select>
         </div>
-        ${canPreview && hasLink ? renderLinkEditor(message) : ""}
+        <div class="field">
+          <label for="sticker-text">画像なしの文字</label>
+          <input id="sticker-text" data-bind="stickerText" data-focus-key="stickerText" maxlength="18" value="${escapeAttr(message.stickerText || defaultStickerText())}" />
+        </div>
+        <div class="field wide">
+          <label>スタンプ画像（任意）</label>
+          <div class="image-row">
+            <div class="sticker-preview">${preview}</div>
+            <button class="button secondary" data-action="choose-sticker">${icon("image", 16)}画像を選択</button>
+            ${message.stickerImage ? `<button class="link-button" data-action="clear-sticker">削除</button>` : ""}
+            <input id="sticker-input" type="file" accept="image/*" hidden />
+          </div>
+        </div>
+        <div class="field wide">
+          <label for="sticker-size">表示サイズ</label>
+          <div class="sticker-size-row">
+            <input id="sticker-size" type="range" min="96" max="240" step="4" data-bind="stickerSize" data-focus-key="stickerSize" value="${escapeAttr(size)}" />
+            <span class="sticker-size-value">${escapeHtml(size)}px</span>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -584,6 +716,9 @@
     if (message.kind === "notice") {
       return `<div class="notice-chip">${escapeHtml(message.text)}</div>`;
     }
+    if (message.kind === "sticker") {
+      return renderStickerMessage(message, index);
+    }
 
     const isSelf = message.kind === "self";
     const time = index > 1 ? "14:55" : "14:43";
@@ -609,6 +744,37 @@
           ${messageTime}
         </div>
         ${linkCard}
+      </div>
+    `;
+  }
+
+  function renderStickerMessage(message, index) {
+    const isSelf = message.stickerSender === "self";
+    const size = clampStickerSize(message.stickerSize);
+    const time = index > 1 ? "14:55" : "14:43";
+    const readTime = index > 3 ? "10:54" : "21:46";
+    const avatar = isSelf ? "" : renderAvatar();
+    const read = isSelf
+      ? `<span class="read-time"><span>既読</span><span>${readTime}</span></span>`
+      : "";
+    const messageTime = isSelf
+      ? ""
+      : `<span class="message-time">${time}</span>`;
+    const stickerContent = message.stickerImage
+      ? `<img src="${escapeAttr(message.stickerImage)}" alt="" />`
+      : `<span class="sticker-placeholder-text">${escapeHtml(message.stickerText || defaultStickerText())}</span>`;
+    const imageClass = message.stickerImage ? " has-image" : "";
+
+    return `
+      <div class="message-stack sticker ${isSelf ? "self" : "other"}">
+        <div class="sticker-row ${isSelf ? "self" : "other"}">
+          ${avatar}
+          ${read}
+          <div class="sticker-frame${imageClass}" style="width:${escapeAttr(size)}px">
+            ${stickerContent}
+          </div>
+          ${messageTime}
+        </div>
       </div>
     `;
   }
@@ -665,22 +831,65 @@
   }
 
   function addMessage(kind) {
-    const textByKind = {
-      other: "新しい相手の発言",
-      self: "新しい自分の発言",
-      date: "7月1日(水)",
-      notice: "メッセージの送信を取り消しました",
-    };
     const message = {
-      id: uid(kind === "date" ? "date" : kind === "notice" ? "notice" : "m"),
+      id: uid(messageIdPrefix(kind)),
       kind,
-      text: textByKind[kind] || textByKind.other,
+      text: defaultTextByKind(kind),
     };
+    if (kind === "sticker") {
+      Object.assign(message, {
+        text: "",
+        stickerSender: "other",
+        stickerImage: SAMPLE_STICKER_IMAGE,
+        stickerText: defaultStickerText(),
+        stickerSize: 168,
+      });
+    }
     selectedId = message.id;
     setState((data) => {
       data.messages.push(message);
       return data;
     }, { preserveFocus: false });
+  }
+
+  function defaultTextByKind(kind) {
+    const textByKind = {
+      other: "新しい相手の発言",
+      self: "新しい自分の発言",
+      date: "7月1日(水)",
+      notice: "メッセージの送信を取り消しました",
+      sticker: "",
+    };
+    return textByKind[kind] || textByKind.other;
+  }
+
+  function patchForKindChange(kind) {
+    const allowed = new Set(["other", "self", "date", "notice", "sticker"]);
+    const nextKind = allowed.has(kind) ? kind : "other";
+    const current = selectedMessage();
+    if (nextKind === "sticker") {
+      return {
+        kind: "sticker",
+        text: "",
+        stickerSender:
+          current && current.stickerSender === "self"
+            ? "self"
+            : current && current.kind === "self"
+              ? "self"
+              : "other",
+        stickerImage: (current && current.stickerImage) || SAMPLE_STICKER_IMAGE,
+        stickerText: (current && current.stickerText) || defaultStickerText(),
+        stickerSize: clampStickerSize(current && current.stickerSize),
+      };
+    }
+
+    return {
+      kind: nextKind,
+      text:
+        current && current.kind !== "sticker" && current.text
+          ? current.text
+          : defaultTextByKind(nextKind),
+    };
   }
 
   function updateSelected(patch) {
@@ -710,7 +919,7 @@
       if (index < 0) return data;
       const duplicate = {
         ...data.messages[index],
-        id: uid(data.messages[index].kind === "date" ? "date" : "m"),
+        id: uid(messageIdPrefix(data.messages[index].kind)),
       };
       data.messages.splice(index + 1, 0, duplicate);
       selectedId = duplicate.id;
@@ -909,6 +1118,8 @@
     }
     if (action === "choose-thumbnail") app.querySelector("#thumbnail-input")?.click();
     if (action === "clear-thumbnail") updateSelected({ thumbnailImage: "" });
+    if (action === "choose-sticker") app.querySelector("#sticker-input")?.click();
+    if (action === "clear-sticker") updateSelected({ stickerImage: "" });
     if (action === "export-json") {
       downloadBlob(
         new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }),
@@ -944,13 +1155,18 @@
     if (bind === "selectedText") updateSelected({ text: value });
     if (bind === "linkTitle") updateSelected({ linkTitle: value });
     if (bind === "linkDescription") updateSelected({ linkDescription: value });
+    if (bind === "stickerText") updateSelected({ stickerText: value });
+    if (bind === "stickerSize") updateSelected({ stickerSize: clampStickerSize(value) });
   });
 
   app.addEventListener("change", async (event) => {
     const target = event.target;
     const bind = target.dataset.bind;
 
-    if (bind === "selectedKind") updateSelected({ kind: target.value });
+    if (bind === "selectedKind") updateSelected(patchForKindChange(target.value));
+    if (bind === "stickerSender") {
+      updateSelected({ stickerSender: target.value === "self" ? "self" : "other" });
+    }
     if (bind === "showLinkCard") updateSelected({ showLinkCard: target.checked });
     if (bind === "showPreviewPlayButton") updateSelected({ showPreviewPlayButton: target.checked });
 
@@ -965,6 +1181,10 @@
     if (target.id === "thumbnail-input" && target.files?.[0]) {
       const dataUrl = await fileToDataUrl(target.files[0]);
       updateSelected({ thumbnailImage: dataUrl });
+    }
+    if (target.id === "sticker-input" && target.files?.[0]) {
+      const dataUrl = await fileToDataUrl(target.files[0]);
+      updateSelected({ stickerImage: dataUrl });
     }
     if (target.id === "json-input" && target.files?.[0]) {
       await importJson(target.files[0]);
