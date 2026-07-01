@@ -2,6 +2,10 @@
 
 架空のLINE風トーク画像をブラウザだけで作成・編集し、PNG画像として保存できる静的Webアプリです。
 
+## 公開URL
+
+https://chro96.github.io/line-fake-chat-generator/
+
 ## サンプル画面
 
 ![架空LINEトーク作成ツールのサンプル画面](assets/readme-sample.png)
