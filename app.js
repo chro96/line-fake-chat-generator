@@ -15,29 +15,30 @@
 
   const demoState = {
     ...emptyState,
+    partnerName: "ゆうた",
     messages: [
       { id: "date-1", kind: "date", text: "7月1日(水)" },
       {
         id: "m-1",
         kind: "other",
-        text: "今駅に着きました。\n少し早めに着きそうです。",
+        text: "ねえ、今日ほんとに来るよね？\nもう駅ついたんだけど〜",
       },
       {
         id: "m-2",
         kind: "self",
-        text: "了解です！\nこちらもあと10分くらいで着きます。",
+        text: "行くってば笑\nあと10分くらい、待ってて",
       },
       {
         id: "notice-1",
         kind: "notice",
-        text: "田中太郎がメッセージの送信を取り消しました",
+        text: "ゆうたがメッセージの送信を取り消しました",
       },
       {
         id: "m-3",
         kind: "other",
-        text: "お店の場所はこちらです。\nhttps://example.com/cafe-map\n駅から徒歩3分くらいです",
-        linkTitle: "駅前カフェの地図",
-        linkDescription: "駅から徒歩3分。入口近くの席で待ち合わせできます。",
+        text: "さっきの誤字、見なかったことにして笑\nここで待ってる\nhttps://example.com/cafe-map",
+        linkTitle: "いつものカフェ",
+        linkDescription: "駅からすぐの、前に一緒に行ったお店。窓際の席にいるよ。",
         thumbnailImage: "",
         showLinkCard: true,
         showPreviewPlayButton: false,
@@ -45,17 +46,17 @@
       {
         id: "m-4",
         kind: "other",
-        text: "ありがとうございます。\nこのカフェで合ってますか？",
+        text: "てかお腹すいた。\n早く来て",
       },
       {
         id: "m-5",
         kind: "self",
-        text: "はい、そこです。\n入口近くの席にいます。",
+        text: "はいはい笑\n着いたら甘いの半分ちょうだい",
       },
       {
         id: "m-6",
         kind: "other",
-        text: "わかりました。\n着いたらまた連絡します！",
+        text: "半分どころか一口だけね。\n急いで〜",
       },
     ],
   };
