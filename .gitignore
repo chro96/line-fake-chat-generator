@@ -1,0 +1,16 @@
+.DS_Store
+node_modules/
+dist/
+coverage/
+*.log
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+serviceAccountKey.json
+credentials.json
